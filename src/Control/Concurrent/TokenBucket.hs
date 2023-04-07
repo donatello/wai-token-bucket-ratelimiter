@@ -3,6 +3,7 @@
 module Control.Concurrent.TokenBucket
   ( Rate (..),
     mkRate,
+    infRate,
     TokenBucket,
     newTokenBucket,
     tryAllocateTokens,
@@ -23,13 +24,18 @@ data Rate = Rate
   }
   deriving stock (Show, Eq)
 
--- | mkRate creates a 'Rate' given the burst amount, and the number of
+-- | @mkRate@ creates a 'Rate' given the burst amount, and the number of
 -- operations (must be > 0) to allow per number of seconds given.
 mkRate :: Word64 -> (Word64, Word64) -> Rate
 mkRate burst (numOperations, numSeconds) =
   let nanos = fromIntegral $ numSeconds * C.s2ns :: Double
       perToken = round (nanos / fromIntegral numOperations)
    in Rate burst perToken
+
+-- | @infRate@ creates a 'Rate' whose limit can never be exceeded. Useful to
+-- never limit an operation.
+infRate :: Rate
+infRate = Rate {rateBurstAmount = 0, rateNanosPerToken = 0}
 
 data TB = TB
   { tbTokens :: !Word64,

@@ -15,6 +15,7 @@ module Network.Wai.RateLimitMiddleware
   ( -- * Types, constructors and setters
     Rate (..),
     mkRate,
+    infRate,
     RateLimitSettings,
     newRateLimitSettings,
     setRateLimitExceededResponse,
