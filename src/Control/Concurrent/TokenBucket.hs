@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Control.Concurrent.TokenBucket
   ( Rate (..),
     mkRate,
@@ -46,10 +48,18 @@ newTokenBucket r = do
   mv <- M.newMVar $ TB (rateBurstAmount r) now r
   return $ TokenBucket mv
 
+#if linux_HOST_OS==1
+-- On Linux we use MonotonicCoarse for better performance.
 getTimeNanos :: IO Word64
 getTimeNanos = do
   t <- C.getTime C.MonotonicCoarse
   return $ fromInteger $ C.toNanoSecs t
+#else
+getTimeNanos :: IO Word64
+getTimeNanos = do
+  t <- C.getTime C.Monotonic
+  return $ fromInteger $ C.toNanoSecs t
+#endif
 
 -- unsigned arithmetic helpers
 minus, plus :: Word64 -> Word64 -> Word64

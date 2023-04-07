@@ -41,7 +41,6 @@ import Data.Maybe (isNothing)
 import Data.Word (Word64)
 import Network.HTTP.Types (status429)
 import Network.Wai (Middleware, Request, Response, responseLBS)
-import System.Clock qualified as C
 
 newtype CacheData key = CacheData
   { contents :: H.HashMap key TokenBucket
@@ -64,7 +63,7 @@ data RateLimitSettings key = RateLimitSettings
   { getRequestKeyAndRate :: Request -> IO (key, Rate),
     limitExceededResponse :: Response,
     tbCache :: Cache key,
-    resetInterval :: Maybe C.TimeSpec,
+    resetInterval :: Maybe Int,
     resetThreadId :: Maybe ThreadId
   }
 
@@ -88,23 +87,23 @@ setRateLimitExceededResponse :: RateLimitSettings key -> Response -> RateLimitSe
 setRateLimitExceededResponse s rsp = s {limitExceededResponse = rsp}
 
 -- | @setResetInterval@ starts a thread to reset (clear) the token buckets map
--- after every given interval period of time. This is useful if your webserver
--- generates a lot of request 'key's that go idle after some activity. In this
--- situation the token bucket cache memory usage grows as it contains an entry
--- every key seen. When the cache is reset, the memory can be garbage collected.
--- Though this will cause all rate limit token buckets to go "full" (i.e. allow
--- the full burst of requests immediately), this solution is acceptable as this
--- is the case when the webserver is restarted as well. By default, there is no
--- reset thread launched (unless this function is called).
-setResetInterval :: RateLimitSettings key -> C.TimeSpec -> IO (RateLimitSettings key)
-setResetInterval s i = do
+-- after every given interval period of time (expressed in seconds). This is
+-- useful if your webserver generates a lot of request 'key's that go idle after
+-- some activity. In this situation the token bucket cache memory usage grows as
+-- it contains an entry every key seen. When the cache is reset, the memory can
+-- be garbage collected. Though this will cause all rate limit token buckets to
+-- go "full" (i.e. allow the full burst of requests immediately), this solution
+-- is acceptable as this is the case when the webserver is restarted as well. By
+-- default, there is no reset thread launched (unless this function is called).
+setResetInterval :: RateLimitSettings key -> Int -> IO (RateLimitSettings key)
+setResetInterval s seconds = do
   stopResetThread s
   tid <- forkIO $ forever $ do
-    threadDelay $ fromInteger (C.toNanoSecs i) `div` 1000
+    threadDelay $ seconds * 1000000
     resetCache $ tbCache s
   return $
     s
-      { resetInterval = Just i,
+      { resetInterval = Just seconds,
         resetThreadId = Just tid
       }
 
