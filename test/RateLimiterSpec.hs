@@ -20,6 +20,7 @@ import Network.Wai
 import Network.Wai.Handler.Warp qualified as Warp
 import Network.Wai.RateLimitMiddleware
   ( Rate,
+    infRate,
     mkRate,
     newRateLimitSettings,
     rateLimitMiddleware,
@@ -37,7 +38,7 @@ testKeyFunc r = do
   let path = rawPathInfo r
       rate = case path of
         "/1" -> mkRate 5 (4, 1)
-        "/2" -> mkRate 2 (1, 1)
+        "/2" -> infRate
         _ -> mkRate 1 (1, 1)
   return (path, rate)
 
@@ -93,3 +94,9 @@ spec = do
             threadDelay 200000
             mkReq mgr "/1"
           rs `shouldBe` [429, 200, 200, 200]
+
+      context "with infRate" $ do
+        it "requests never fail" $ do
+          mgr <- newManager defaultManagerSettings
+          rs <- replicateM 10 $ mkReq mgr "/2"
+          rs `shouldBe` replicate 10 200
