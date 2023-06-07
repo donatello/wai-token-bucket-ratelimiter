@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE StrictData #-}
 
 module Control.Concurrent.TokenBucket
   ( Rate (..),

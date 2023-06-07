@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- |
 -- Module     : Network.Wai.RateLimitMiddleware
 --
